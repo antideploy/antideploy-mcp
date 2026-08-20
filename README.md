@@ -1,7 +1,7 @@
 # antideploy-mcp
 
 Deploy an application to [Antideploy](https://antideploy.com) from inside a coding
-agent. Claude Code, Cursor, Windsurf, Codex — anything that speaks MCP.
+agent. Claude Code, Cursor, Windsurf, Codex, anything that speaks MCP.
 
 You describe what you want built. The agent writes it, then deploys it, without
 either of you writing a Dockerfile, a YAML file, or touching a cloud console.
@@ -38,7 +38,7 @@ claude mcp add antideploy -e ANTIDEPLOY_API_KEY=ad_your_key -- npx -y antideploy
 
 Create an application at [antideploy.com](https://antideploy.com), then create an
 API key for it. **The key identifies the application**, so you never pass an
-application id — one key, one app. That is deliberate: this key ends up pasted
+application id: one key, one app. That is deliberate: this key ends up pasted
 into a project directory, which means it will eventually be committed or
 screenshotted, so it is scoped to a single application, can write secrets but
 never read them back, and can be revoked on its own.
@@ -66,7 +66,7 @@ starts fine, and then serves a page whose every asset 404s.
 
 **A `.env` in the directory is uploaded on purpose.** Its values go into
 Antideploy's encrypted secret store and the file itself is dropped from the build
-context — so you don't retype nine API keys you already have on disk. If that is
+context, so you don't retype nine API keys you already have on disk. If that is
 not what you want, move the file before deploying.
 
 Skipped automatically: `node_modules`, `.git`, build output (`dist`, `build`,
@@ -95,12 +95,12 @@ rather than a transfer.
 ## What Antideploy does with what you send
 
 Reads the source and works out the runtime, framework, build and start commands,
-the port, and every environment variable the code references — deterministically,
+the port, and every environment variable the code references, deterministically,
 citing the file each conclusion came from, not by asking a model to guess. Then
 provisions what the app needs, including a Postgres database with `DATABASE_URL`
 injected and migrations run *before* the app starts rather than after it has
 already crashed. Then builds a container with buildpacks, releases it behind
-HTTPS, and keeps it running — health checks, logs, and rollback to an
+HTTPS, and keeps it running: health checks, logs, and rollback to an
 already-built image in about forty seconds.
 
 Full documentation: [antideploy.com/docs](https://antideploy.com/docs)
