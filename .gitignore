@@ -1,2 +1,7 @@
 node_modules/
 *.tgz
+
+# Registry publishing CLI, downloaded on demand, not source
+mcp-publisher.exe
+mcp-publisher
+mcp-publisher.tar.gz
