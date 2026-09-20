@@ -1,0 +1,37 @@
+{
+  "name": "antideploy",
+  "displayName": "Antideploy",
+  "version": "0.1.1",
+  "description": "Deploy an application to Antideploy from your coding agent. Reads the project, works out the infrastructure it needs, builds it and keeps it running. No Dockerfile, no YAML, no cloud console.",
+  "author": {
+    "name": "Antideploy",
+    "url": "https://antideploy.com"
+  },
+  "homepage": "https://antideploy.com/docs/deploying/mcp",
+  "repository": "https://github.com/antideploy/antideploy-mcp",
+  "license": "MIT",
+  "keywords": [
+    "deploy",
+    "deployment",
+    "hosting",
+    "paas",
+    "mcp",
+    "claude-code",
+    "cursor",
+    "antideploy"
+  ],
+  "userConfig": {
+    "api_key": {
+      "type": "string",
+      "title": "Antideploy API key",
+      "description": "Create one in the Antideploy console under the application's settings. Starts with ad_. Without it the server loads but every tool refuses.",
+      "sensitive": true
+    },
+    "base_url": {
+      "type": "string",
+      "title": "Antideploy base URL",
+      "description": "Optional. Defaults to https://antideploy.com. Only set this for a self-hosted or staging instance. Left blank, the default applies.",
+      "sensitive": false
+    }
+  }
+}

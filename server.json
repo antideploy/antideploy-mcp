@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.antideploy/antideploy-mcp",
+  "title": "Antideploy",
+  "description": "Deploy an app to Antideploy from a coding agent. No Dockerfile, no YAML, no cloud console.",
+  "websiteUrl": "https://antideploy.com/docs/deploying/mcp",
+  "repository": {
+    "url": "https://github.com/antideploy/antideploy-mcp",
+    "source": "github"
+  },
+  "version": "0.1.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "antideploy-mcp",
+      "version": "0.1.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "ANTIDEPLOY_API_KEY",
+          "description": "Antideploy API key for the application, created in the console under the application's settings. Starts with ad_.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "ANTIDEPLOY_URL",
+          "description": "Base URL of the Antideploy instance. Defaults to https://antideploy.com. Only set for a self-hosted or staging instance.",
+          "isRequired": false,
+          "isSecret": false
+        }
+      ]
+    }
+  ]
+}

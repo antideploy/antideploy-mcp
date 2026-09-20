@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "antideploy": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "antideploy-mcp"],
+      "env": {
+        "ANTIDEPLOY_API_KEY": "${user_config.api_key}",
+        "ANTIDEPLOY_URL": "${user_config.base_url}"
+      },
+      "enabled": true
+    }
+  }
+}

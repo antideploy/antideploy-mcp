@@ -1,0 +1,35 @@
+{
+  "name": "antideploy",
+  "owner": {
+    "name": "Antideploy",
+    "url": "https://antideploy.com"
+  },
+  "metadata": {
+    "description": "Antideploy plugin marketplace for Claude Code.",
+    "version": "0.1.1"
+  },
+  "plugins": [
+    {
+      "name": "antideploy",
+      "source": "./",
+      "description": "Deploy an application to Antideploy from your coding agent. Reads the project, works out the infrastructure it needs, builds it and keeps it running. No Dockerfile, no YAML, no cloud console.",
+      "author": {
+        "name": "Antideploy",
+        "url": "https://antideploy.com"
+      },
+      "homepage": "https://antideploy.com/docs/deploying/mcp",
+      "repository": "https://github.com/antideploy/antideploy-mcp",
+      "license": "MIT",
+      "keywords": [
+        "deploy",
+        "deployment",
+        "hosting",
+        "paas",
+        "mcp",
+        "claude-code",
+        "cursor",
+        "antideploy"
+      ]
+    }
+  ]
+}
