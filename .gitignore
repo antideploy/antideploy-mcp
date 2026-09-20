@@ -5,3 +5,6 @@ node_modules/
 mcp-publisher.exe
 mcp-publisher
 mcp-publisher.tar.gz
+
+# DNS auth signing key for the MCP registry. Never commit.
+.mcp-dns-key.txt

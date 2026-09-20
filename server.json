@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.antideploy/antideploy-mcp",
+  "name": "com.antideploy/antideploy-mcp",
   "title": "Antideploy",
   "description": "Deploy an app to Antideploy from a coding agent. No Dockerfile, no YAML, no cloud console.",
   "websiteUrl": "https://antideploy.com/docs/deploying/mcp",
@@ -8,13 +8,13 @@
     "url": "https://github.com/antideploy/antideploy-mcp",
     "source": "github"
   },
-  "version": "0.1.2",
+  "version": "0.1.3",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "antideploy-mcp",
-      "version": "0.1.2",
+      "version": "0.1.3",
       "transport": {
         "type": "stdio"
       },

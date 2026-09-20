@@ -1,7 +1,7 @@
 {
   "name": "antideploy-mcp",
-  "version": "0.1.2",
-  "mcpName": "io.github.antideploy/antideploy-mcp",
+  "version": "0.1.3",
+  "mcpName": "com.antideploy/antideploy-mcp",
   "description": "Deploy an application to Antideploy from a coding agent. MCP server and CLI.",
   "type": "module",
   "bin": {
