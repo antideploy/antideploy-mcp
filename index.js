@@ -164,7 +164,8 @@ const server = new McpServer(
       "written, `database_create` gives it its Postgres now and `database_env_to_file` puts the " +
       "connection in .env without printing it, so it is built against the real database and the " +
       "deploy later reuses it; do not send the user to sign up for another, and do not push " +
-      "DATABASE_URL through `set_env`. Once something is live, the " +
+      "DATABASE_URL through `set_env`. A project that takes uploads gets its private S3 bucket the " +
+      "same way, with `storage_create` and `storage_env_to_file`, instead of writing to disk. Once something is live, the " +
       "other tools run it: `logs`, `health`, `metrics` and `deployment_history` to see what " +
       "happened, `redeploy` after changing a variable, `rollback` to undo a bad release, " +
       "`add_schedule` for jobs, and `update_app_settings` for the address and deploy-on-push.",
@@ -630,6 +631,51 @@ function ensureIgnored(target) {
   return "added " + rel + " to .gitignore";
 }
 
+/**
+ * Fetch a variables file the platform made for this application, using the account token, and write it into a
+ * `.env` file, answering with the names only. The database's connection and the bucket's key travel the same
+ * way for the same reason: both are a secret, a project key is not allowed to read either, and neither may
+ * appear in a transcript. `what` names the secret in the message for a machine that has not connected yet.
+ */
+async function envToFile(apiPath, file, what) {
+  const target = envFileTarget(file);
+  const token = accountToken();
+  if (!token) {
+    throw new Error(
+      "No account token on this machine. A project key cannot read " + what + ". " +
+        "Connect once: follow https://antideploy.com/agent.md (the user clicks Approve), which saves a " +
+        "token at ~/.antideploy/config.json, then call this again.",
+    );
+  }
+
+  const applicationId = await ownApplicationId();
+  const response = await fetch(BASE + apiPath + query({ applicationId }), {
+    headers: { authorization: "Bearer " + token },
+  });
+  const body = await response.text();
+  if (!response.ok) {
+    let detail = response.statusText;
+    try {
+      const parsed = JSON.parse(body);
+      detail = parsed.error || parsed.code || detail;
+    } catch {
+      /* keep the status text */
+    }
+    throw new Error(response.status + " from " + apiPath + ": " + detail);
+  }
+
+  const entries = envLines(body);
+  const { replaced, added } = mergeEnvFile(target, entries);
+  return asText({
+    file: target,
+    variables: entries.map((e) => e.key),
+    replaced,
+    added,
+    gitignore: ensureIgnored(target),
+    note: "The values are in the file, not in this result. Do not print the file.",
+  });
+}
+
 server.registerTool(
   "database_create",
   {
@@ -672,44 +718,66 @@ server.registerTool(
     },
     annotations: { openWorldHint: false },
   },
-  async ({ file }) => {
-    const target = envFileTarget(file);
-    const token = accountToken();
-    if (!token) {
-      throw new Error(
-        "No account token on this machine. A project key cannot read a database's connection string. " +
-          "Connect once: follow https://antideploy.com/agent.md (the user clicks Approve), which saves a " +
-          "token at ~/.antideploy/config.json, then call this again.",
-      );
-    }
+  async ({ file }) => envToFile("/api/v1/database/env", file, "a database's connection string"),
+);
 
-    const applicationId = await ownApplicationId();
-    const response = await fetch(BASE + "/api/v1/database/env" + query({ applicationId }), {
-      headers: { authorization: "Bearer " + token },
-    });
-    const body = await response.text();
-    if (!response.ok) {
-      let detail = response.statusText;
-      try {
-        const parsed = JSON.parse(body);
-        detail = parsed.error || parsed.code || detail;
-      } catch {
-        /* keep the status text */
-      }
-      throw new Error(response.status + " from /api/v1/database/env: " + detail);
-    }
+/* ── File storage, the same way ─────────────────────────────────────────────
+ *
+ * A project that takes uploads used to write them to the container's disk,
+ * which is replaced on every deploy, or send the user to sign up for a bucket
+ * somewhere. The platform makes a private S3 bucket per application, and these
+ * two put it in reach while the code is still being written.
+ *
+ * Same split as the database: creating one is allowed to a project key, and
+ * reading its access key is not, so the key goes to a .env file by the account
+ * token and never into the conversation.
+ */
 
-    const entries = envLines(body);
-    const { replaced, added } = mergeEnvFile(target, entries);
-    return asText({
-      file: target,
-      variables: entries.map((e) => e.key),
-      replaced,
-      added,
-      gitignore: ensureIgnored(target),
-      note: "The values are in the file, not in this result. Do not print the file.",
-    });
+server.registerTool(
+  "storage_create",
+  {
+    title: "Create the application's file storage now",
+    description:
+      "Create a private S3 bucket for this application now, while the project is still being written, " +
+      "so uploads are built and tested against real storage instead of the container's disk, which is " +
+      "wiped on every deploy. A later deploy gives the running app the same bucket. Safe to call twice. " +
+      "Only for a project that stores uploads or generated files: skip it otherwise, and skip it when " +
+      "the project already has a storage key of its own (an AWS_ACCESS_KEY_ID in .env that is not ours, " +
+      "or a service the user named, such as Cloudinary or UploadThing): the answer is a 409 own_storage. " +
+      "It counts against the plan's bucket allowance; a 402 storage_limit is not a rate limit, so do not " +
+      "retry, say what it says and let the user choose. If the call is refused or blocked, do not look " +
+      "for another route: tell the user. The key is not returned: call `storage_env_to_file` to put it " +
+      "in .env. The client must use path-style addressing (forcePathStyle: true), and a browser can " +
+      "upload straight to the bucket with a presigned PUT URL. Tell the user what was created and on " +
+      "which account.",
+    inputSchema: {},
   },
+  async () => asText(await api("/api/v1/storage", asJson("POST", {}))),
+);
+
+server.registerTool(
+  "storage_env_to_file",
+  {
+    title: "Put the file storage's variables in .env",
+    description:
+      "Write the bucket's name, endpoint, region and access key (AWS_S3_BUCKET, AWS_ACCESS_KEY_ID, " +
+      "AWS_SECRET_ACCESS_KEY, AWS_ENDPOINT_URL_S3, AWS_REGION and the spellings other S3 libraries read) " +
+      "into a .env file in the project directory, and return only the names of what was written. The " +
+      "key goes into the file and never into this conversation, so do not read the file back out to the " +
+      "user. These are the same variables the deployed app receives, so do not copy them into " +
+      "`set_env`. Variables already in the file are replaced, everything else is kept, and the file is " +
+      "added to .gitignore. The bucket has to exist first: `storage_create` makes it. Needs the account " +
+      "token that connecting through https://antideploy.com/agent.md saves on this machine: a project " +
+      "key cannot read the access key.",
+    inputSchema: {
+      file: z
+        .string()
+        .optional()
+        .describe("A .env file inside the project directory. Default .env; .env.local suits Next.js."),
+    },
+    annotations: { openWorldHint: false },
+  },
+  async ({ file }) => envToFile("/api/v1/storage/env", file, "a bucket's access key"),
 );
 
 server.registerTool(

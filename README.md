@@ -66,6 +66,8 @@ Deploying somewhere new means a new app and a new key.
 | `database_info` | The application's database: state, size, tables, connection string masked. |
 | `database_create` | Create the application's Postgres now, before its first deploy, so the project is written against the real database. Idempotent. The deploy later reuses it. |
 | `database_env_to_file` | Write `DATABASE_URL` and the `PG*` variables into `.env` and return only their names, so the password never enters the conversation. Needs the account token saved by the connect step. |
+| `storage_create` | Create the application's private S3 bucket now, before its first deploy, for a project that stores uploads. Idempotent. The deploy later gives the running app the same bucket. |
+| `storage_env_to_file` | Write `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION` and the other spellings into `.env` and return only their names, so the key never enters the conversation. Needs the account token saved by the connect step. |
 | `security_scan`, `security_scan_status` | Scan the live app for common vulnerabilities, and read the findings. |
 | `ai_wallet`, `create_ai_key` | The AI wallet balance, and an AI key saved into the application as `OPENROUTER_API_KEY` (the secret is never shown to the agent). |
 | `api_info` | The platform API's own description of itself. |
@@ -78,7 +80,7 @@ database, and creating more keys. An agent that can run commands can do both
 with an account token (see `https://antideploy.com/agent.md`). Custom domains,
 deleting an application and billing stay in the dashboard.
 
-### Building against the database before the first deploy
+### Building against the database and the bucket before the first deploy
 
 `database_create` works with the project key alone. Reading the connection
 string does not, because a project key is made to be committed and must not be
@@ -90,6 +92,11 @@ that gets committed), and uses it for the one application the key names. It
 writes only to a `.env*` file inside the project directory, replaces variables
 that are already there instead of adding a second copy, and adds the file to
 `.gitignore`. Without the token it says how to get one.
+
+File storage works the same way: `storage_create` takes the project key alone,
+and `storage_env_to_file` uses the account token to put the bucket's access key
+in `.env`. The bucket speaks S3 with path-style addressing, so the client needs
+`forcePathStyle: true`, and a browser can upload to it with a presigned URL.
 
 ## Two things worth knowing
 
