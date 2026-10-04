@@ -95,8 +95,10 @@ that are already there instead of adding a second copy, and adds the file to
 
 File storage works the same way: `storage_create` takes the project key alone,
 and `storage_env_to_file` uses the account token to put the bucket's access key
-in `.env`. The bucket speaks S3 with path-style addressing, so the client needs
-`forcePathStyle: true`, and a browser can upload to it with a presigned URL.
+in `.env`. The bucket speaks S3 with path-style addressing, which current AWS
+SDKs and boto3 choose by themselves for its name, so existing code that reads
+those variables works as it is (new JavaScript code can set `forcePathStyle:
+true` anyway), and a browser can upload to it with a presigned URL.
 
 ## Two things worth knowing
 

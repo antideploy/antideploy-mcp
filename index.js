@@ -747,9 +747,10 @@ server.registerTool(
       "It counts against the plan's bucket allowance; a 402 storage_limit is not a rate limit, so do not " +
       "retry, say what it says and let the user choose. If the call is refused or blocked, do not look " +
       "for another route: tell the user. The key is not returned: call `storage_env_to_file` to put it " +
-      "in .env. The client must use path-style addressing (forcePathStyle: true), and a browser can " +
-      "upload straight to the bucket with a presigned PUT URL. Tell the user what was created and on " +
-      "which account.",
+      "in .env. Addressing is path style, which current AWS SDKs and boto3 choose by themselves for " +
+      "this bucket's name, so existing code that reads those variables works as it is; in new " +
+      "JavaScript code set forcePathStyle: true anyway. A browser can upload straight to the bucket " +
+      "with a presigned PUT URL. Tell the user what was created and on which account.",
     inputSchema: {},
   },
   async () => asText(await api("/api/v1/storage", asJson("POST", {}))),
