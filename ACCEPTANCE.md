@@ -8,7 +8,7 @@ Statuses are **Verified** (seen working, with the evidence named), **Failed**, o
 
 | Agent | Installation method | Authentication | Deployment | Logs | Update | Result |
 | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake. The live runs below used `--mcp-config` with the bundle, not the plugin install. Untested from GitHub or npm | **Verified live** with one Approve click. One extra message was needed, see "Findings" | **Verified live**: the agent created the application and deployed the Vite starter; it went live 2 min 41 s after the deploy call. The agent itself gave up early, see "Findings" | The agent never reached `logs`. The tool itself is **verified live** by a direct call | The agent's own redeploy was stopped by its spend cap before any deploy ran. The update itself is **verified live** by a direct call. The saved login and the folder link were **reused by a new agent session** | Deploys and reuses its login. Needed the status-wait fix, now in `ea46a92`; the agent has not yet been re-run with it |
+| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake. The live runs below used `--mcp-config` with the bundle, not the plugin install. Untested from GitHub or npm | **Verified live** with one Approve click. One extra message was needed, see "Findings" | **Verified live**: the agent created the application and deployed the Vite starter; it went live 2 min 41 s after the deploy call. In the first run the agent gave up early (finding 1); with the fix (run F) it finished | **Verified live** in run F: the agent read the logs after the deploy and reported the address and the account | **Verified live**: in run F an agent deployed over an existing application. The update itself was also checked by a direct call, and a second session **reused the saved login and the folder link** | Deploys, reads logs and reuses its login. One extra message after the Approve click. Found the silent name reuse in finding 7, now warned about in `f6094cc` |
 | Cursor 2.6.20 | Untested: GUI only, and installing would change the real Cursor settings. Config and install link checked against Cursor's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenAI Codex | Untested: not installed on this machine. `config.toml` checked as valid TOML against Codex's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenCode | Untested: not installed on this machine. `opencode.json` checked against OpenCode's docs | Untested | Untested | Untested | Untested | Untested |
@@ -40,11 +40,11 @@ A is the one-sentence prompt, B the installed skill, C the MCP tools. Only entry
 
 | Scenario | A. Sentence | B. Skill | C. MCP |
 | --- | --- | --- | --- |
-| 1. Deploy a static Vite application | Untested | Untested | **Verified live** with Claude Code (the starter, 13 files, live in 2 min 41 s). Not yet re-run with the status-wait fix |
+| 1. Deploy a static Vite application | Untested | Untested | **Verified live** with Claude Code (the starter, 13 files; first deploy live in 2 min 41 s, and again in run F with 3 status calls) |
 | 2. Deploy a Next.js application | Untested | Untested | Untested |
 | 3. Deploy a backend with managed Postgres | Untested | Untested | Untested |
-| 4. Retrieve deployment logs | Untested | Untested | The tool is **verified live** (direct call, real lines, health `healthy`). No agent has called it yet |
-| 5. Update an existing application | Untested | Untested | Update **verified live** by a direct call (205 s, new page served). An agent's own redeploy is untested |
+| 4. Retrieve deployment logs | Untested | Untested | **Verified live**: a direct call (real lines, health `healthy`) and an agent's own call in run F |
+| 5. Update an existing application | Untested | Untested | Update **verified live** by a direct call (205 s, new page served), and an agent redeployed over an existing application in run F |
 | 6. Diagnose a failed deployment | Untested | Untested | Untested |
 | 7. Credentials are reused correctly | Untested | Untested | **Verified live**: a second Claude Code session, with no approval, saw the saved login and the folder's link to its application |
 
@@ -61,8 +61,9 @@ Platform: https://antideploy.com (production), on a dedicated test account that 
 | C | Same prompt, streaming mode (one connector process for the whole session) | Nobody approved in time. The agent checked four times and stopped | 0.10 USD |
 | D | Same, idling at no cost until the person said "approved" | Connected on the first check after the person's "continue". Created the application, deployed, and the app went live at https://project.antideploy.app after 2 min 41 s. The agent polled the status about 20 times in 40 s, spent 0.44 USD, and stopped at under two minutes, saying the build had been stuck "for many minutes" | 0.44 USD |
 | E | A new Claude Code session, same project and home, "deploy it again" | `login` answered `connected` with no approval and named the application the folder is linked to. Stopped by its 0.20 USD cap after four turns, because a cold prompt cache cost 0.20 USD before the deploy call finished. No new deployment was made | 0.20 USD |
+| F | After the fix, the same prompt in streaming mode with a fresh home (so a new login), idling until the person approved. The `ea46a92` bundle | **Pass.** Connected on the first check after the person's "continue". `create_application` linked the existing `project` application (finding 7); the agent checked its history, said so, and deployed over it. 3 `deployment_status` calls (each waiting up to 40 s, which the agent chose itself), live at https://project.antideploy.app 95 s after the deploy call (a redeploy of an app that was already built once), then it read the logs and told the user the address and the account. Manual steps: the Approve click and one message | 0.23 USD |
 
-Claude Code spend: 0.96 USD of the 1.00 USD allowed. Benchmark probe: 0.23 USD of 0.25 USD.
+Claude Code spend: 1.19 USD (1.00 USD allowed, then 0.30 USD more for run F). Benchmark probe: 0.23 USD of 0.25 USD.
 
 Checks made directly against the connector as the same login, which cost nothing (15 of 15 passed):
 
@@ -83,12 +84,13 @@ Not tested: a second account's token against this account's application (needs a
 
 ### Findings
 
-1. **The agent polled in a tight loop** (run D). `deployment_status` answered at once, so the agent made about 20 calls in 40 s, spent 0.44 USD and gave up on a deploy that finished two minutes later. Fixed in `ea46a92`: one call now waits up to 20 s, `waitSeconds` can shorten or lengthen it (0 to 40), an unfinished answer says to call again, and the skill says not to pause or loop. Verified with the stand-in (a test that fails when the wait is removed) and, for the connector, live (205 s update, 11 calls). **An agent has not been re-run with the fix.**
+1. **The agent polled in a tight loop** (run D). `deployment_status` answered at once, so the agent made about 20 calls in 40 s, spent 0.44 USD and gave up on a deploy that finished two minutes later. Fixed in `ea46a92`: one call now waits up to 20 s, `waitSeconds` can shorten or lengthen it (0 to 40), an unfinished answer says to call again, and the skill says not to pause or loop. Verified with the stand-in (a test that fails when the wait is removed) and, for the connector, live (205 s update, 11 calls). Run F confirms it: 3 status calls instead of about 20, and the deploy finished.
 2. **A pending sign-in does not survive the connector process.** In `claude -p` the process ends with the turn, so a person who approves the link afterwards has approved a code nothing can redeem; the next run issues a new code. Interactive sessions keep the process, and the streaming run (D) connected normally. Saving the pending code to disk, with the same protection as the token, would close this. Not done: it is security-sensitive and needs its own review.
 3. **One extra message was needed.** The agent shows the link and ends its turn; the person clicks Approve and says so. Manual steps for a first deploy: the click and one message.
 4. **A cold start is expensive.** A session whose prompt cache is cold paid about 0.20 USD before doing anything; a warm one paid 0.03 USD per turn. Budget a first run at 0.25 USD or more.
 5. **The starter's own instructions were followed.** Its `CLAUDE.md` says to build before deploying; the agent tried to, found it had no shell, and went on because the platform builds. This shows the harness limit more than a defect.
 6. The agent in run D told the user the account it was connected to, and warned that it was not the address in its context. That is the behaviour the skill asks for.
+7. **A name already in use was linked without a warning** (run F). `create_application` answered `reusedExisting: true` and told the agent to deploy next. The agent noticed, read the history of the application it had just been linked to, assumed it was the folder's own, and deployed over it. Here it was right (it was the earlier test app); with a folder named like a real app, it would have replaced a live site. `link_application` already says never to guess, so this was inconsistent. Fixed in `f6094cc`: the answer carries a `warning`, its next step is to ask the user before deploying, and the skill says the same. Verified with the stand-in (a test that fails without it); not re-run with an agent.
 
 ### To clean up (nothing was deleted automatically)
 
@@ -131,7 +133,6 @@ Then run scenarios 4 to 7 in the same session. Put each result in the matrix abo
 
 ## Not yet known
 
-- Whether an agent finishes a deploy with the status-wait fix; the last agent run predates it.
 - Whether Claude Code, Codex, Cursor and OpenCode choose these tools and this skill for a deploy request on their own. A discovery benchmark, kept in a separate folder (`antideploy-benchmark`) outside this repository, measures that; no baseline has been run.
 - Whether Cursor loads the plugin folder from a subdirectory of a repository, and whether its marketplace accepts that layout.
 - Whether Anthropic's directory scan holds the pinned `npx` launcher for human review (its checklist says a pinned package is held). A hold is not a rejection.
