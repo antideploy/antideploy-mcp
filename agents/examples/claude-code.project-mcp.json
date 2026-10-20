@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "antideploy": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "antideploy-mcp@0.2"]
+    }
+  }
+}

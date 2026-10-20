@@ -2,27 +2,27 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.antideploy/antideploy-mcp",
   "title": "Antideploy",
-  "description": "Deploy an app to Antideploy from a coding agent. No Dockerfile, no YAML, no cloud console.",
+  "description": "Deploy and run apps on Antideploy from a coding agent. Sign in with one link; no dashboard, Dockerfile or YAML.",
   "websiteUrl": "https://antideploy.com/docs/deploying/mcp",
   "repository": {
     "url": "https://github.com/antideploy/antideploy-mcp",
     "source": "github"
   },
-  "version": "0.1.4",
+  "version": "0.2.0",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "antideploy-mcp",
-      "version": "0.1.4",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
       "environmentVariables": [
         {
           "name": "ANTIDEPLOY_API_KEY",
-          "description": "Antideploy API key for the application, created in the console under the application's settings. Starts with ad_.",
-          "isRequired": true,
+          "description": "Optional. A project key for one application, from the console, starting with ad_. Leave it out and use the login tool instead.",
+          "isRequired": false,
           "isSecret": true
         },
         {

@@ -1,0 +1,5 @@
+[mcp_servers.antideploy]
+command = "npx"
+args = ["-y", "antideploy-mcp@0.2"]
+startup_timeout_sec = 60
+tool_timeout_sec = 120

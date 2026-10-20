@@ -1,28 +1,42 @@
 {
   "name": "antideploy-mcp",
-  "version": "0.1.4",
+  "version": "0.2.0",
   "mcpName": "com.antideploy/antideploy-mcp",
-  "description": "Deploy an application to Antideploy from a coding agent. MCP server and CLI.",
+  "description": "Deploy and run applications on Antideploy from a coding agent: Claude Code, Cursor, Codex, OpenCode. MCP server with a one-click browser login.",
   "type": "module",
   "bin": {
-    "antideploy-mcp": "index.js"
+    "antideploy-mcp": "dist/antideploy-mcp.mjs"
   },
-  "main": "index.js",
+  "main": "dist/antideploy-mcp.mjs",
   "files": [
-    "index.js",
-    "README.md"
+    "dist",
+    "skills",
+    "README.md",
+    "LICENSE"
   ],
+  "scripts": {
+    "build": "node build.mjs",
+    "test": "node --test test/e2e.test.mjs test/units.test.mjs test/packaging.test.mjs",
+    "test:bundle": "node build.mjs && node scripts/with-entry.mjs dist/antideploy-mcp.mjs -- node --test test/e2e.test.mjs",
+    "prepublishOnly": "npm run build && npm test"
+  },
   "engines": {
     "node": ">=18"
   },
   "keywords": [
     "mcp",
+    "mcp-server",
     "model-context-protocol",
+    "agent-skills",
     "deploy",
     "deployment",
     "paas",
+    "hosting",
     "claude",
+    "claude-code",
     "cursor",
+    "codex",
+    "opencode",
     "coding-agent",
     "antideploy"
   ],
@@ -36,9 +50,10 @@
   "bugs": {
     "url": "https://github.com/antideploy/antideploy-mcp/issues"
   },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.0",
-    "tar": "^7.0.0",
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "esbuild": "^0.28.2",
+    "tar": "^7.5.22",
     "zod": "^4.4.3"
   }
 }

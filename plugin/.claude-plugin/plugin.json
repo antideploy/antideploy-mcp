@@ -1,0 +1,28 @@
+{
+  "name": "antideploy",
+  "displayName": "Antideploy",
+  "version": "0.2.0",
+  "description": "Deploy and run applications on Antideploy from Claude Code. Sign in once with a link, and the agent creates the app, its database, deploys it and reads its logs. No dashboard, no Dockerfile, no key to copy.",
+  "author": {
+    "name": "Antideploy",
+    "url": "https://antideploy.com"
+  },
+  "homepage": "https://antideploy.com/docs/deploying/mcp",
+  "repository": "https://github.com/antideploy/antideploy-mcp",
+  "license": "MIT",
+  "keywords": [
+    "deploy",
+    "deployment",
+    "hosting",
+    "paas",
+    "mcp",
+    "claude-code",
+    "skill",
+    "antideploy"
+  ],
+  "icon": "./logo.png",
+  "documentationUrl": "https://antideploy.com/docs/deploying/mcp",
+  "supportUrl": "https://antideploy.com/contact",
+  "privacyPolicyUrl": "https://antideploy.com/privacy",
+  "termsOfServiceUrl": "https://antideploy.com/terms"
+}

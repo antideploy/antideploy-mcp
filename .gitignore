@@ -8,3 +8,10 @@ mcp-publisher.tar.gz
 
 # DNS auth signing key for the MCP registry. Never commit.
 .mcp-dns-key.txt
+
+# Built by npm run build; published, not committed
+dist/
+
+# Local live-check runs: contain the tester account label
+.live/
+live-check-report.json

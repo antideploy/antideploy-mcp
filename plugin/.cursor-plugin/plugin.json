@@ -1,0 +1,6 @@
+{
+  "name": "antideploy",
+  "description": "Deploy and run applications on Antideploy from Cursor. Sign in once with a link, and the agent creates the app, its database, deploys it and reads its logs. No dashboard, no Dockerfile, no key to copy.",
+  "version": "0.2.0",
+  "author": { "name": "Antideploy" }
+}

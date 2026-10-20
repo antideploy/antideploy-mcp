@@ -1,152 +1,115 @@
 # antideploy-mcp
 
-Deploy an application to [Antideploy](https://antideploy.com) from inside a coding
-agent. Claude Code, Cursor, Windsurf, Codex, anything that speaks MCP.
+Deploy and run applications on [Antideploy](https://antideploy.com) from inside a coding agent: Claude Code, Cursor, Codex, OpenCode, or anything that speaks MCP.
 
-You describe what you want built. The agent writes it, then deploys it, without
-either of you writing a Dockerfile, a YAML file, or touching a cloud console.
+You describe what you want built. The agent writes it, signs in with one link you approve, creates the application and its database, deploys it, and tells you where it is live. No dashboard, no Dockerfile, no YAML, no key to copy, and no GitHub repository needed.
 
 ```
-you  ─▶  agent writes the app  ─▶  deploy  ─▶  https://your-app.antideploy.com
+you  ->  agent writes the app  ->  you approve one link  ->  https://your-app.antideploy.app
 ```
 
 ## Install
 
-Nothing to install. The agent runs it with `npx`.
+Pick your agent. Each guide has the exact commands, the config file, the skill, and how to update and remove.
 
-### Claude Code
+| Agent | Quickest install | Guide |
+| --- | --- | --- |
+| Claude Code | `claude plugin marketplace add antideploy/antideploy-mcp` then `claude plugin install antideploy@antideploy` | [agents/claude-code.md](agents/claude-code.md) |
+| Cursor | The install link in the guide, or `.cursor/mcp.json` | [agents/cursor.md](agents/cursor.md) |
+| OpenAI Codex | `codex mcp add antideploy -- npx -y antideploy-mcp@0.2` | [agents/codex.md](agents/codex.md) |
+| OpenCode | An `mcp` entry in `opencode.json` | [agents/opencode.md](agents/opencode.md) |
+| Any other MCP client | Command `npx`, arguments `-y antideploy-mcp@0.2` | below |
 
-```bash
-claude mcp add antideploy -e ANTIDEPLOY_API_KEY=ad_your_key -- npx -y antideploy-mcp
-```
-
-### Cursor, Windsurf, and anything else with an `mcp.json`
+Nothing to install by hand. The agent runs the server with `npx`, which downloads one package of about 250 kB the first time.
 
 ```json
 {
   "mcpServers": {
-    "antideploy": {
-      "command": "npx",
-      "args": ["-y", "antideploy-mcp"],
-      "env": { "ANTIDEPLOY_API_KEY": "ad_your_key" }
-    }
+    "antideploy": { "command": "npx", "args": ["-y", "antideploy-mcp@0.2"] }
   }
 }
 ```
 
-## Getting a key
+No agent with MCP? Paste one sentence instead. The agent follows a page that explains every step:
 
-Create an application at [antideploy.com](https://antideploy.com), then create an
-API key for it. **The key identifies the application**, so you never pass an
-application id: one key, one app. That is deliberate: this key ends up pasted
-into a project directory, which means it will eventually be committed or
-screenshotted, so it is scoped to a single application, can write secrets but
-never read them back, and can be revoked on its own.
+```text
+Set this project up to deploy on Antideploy. Fetch https://antideploy.com/agent.md and follow it.
+```
 
-Deploying somewhere new means a new app and a new key.
+## The first deploy
+
+```text
+Deploy this project on Antideploy.
+```
+
+1. The agent calls `login` and shows you a link and a short code.
+2. You open the link, check the code matches, and click **Approve**. If you have no account, the same link creates one. This is the only thing you do.
+3. The agent calls `create_application` (which records the application in `.antideploy.json`), creates a database if the project needs one, and calls `deploy`.
+4. It polls until the app is live and tells you the address and which Antideploy account it went to.
+
+You sign in once per machine. The login lives in `~/.antideploy/config.json`, readable only by you, and you can revoke it at any time at [antideploy.com/tokens](https://antideploy.com/tokens).
+
+## The skill
+
+[`skills/antideploy`](skills/antideploy/SKILL.md) is an agent skill: it tells the agent when Antideploy fits, how to connect, how to deploy, what to read when something fails, and when to use a different host instead. It works in Claude Code, Cursor, Codex and OpenCode, which all read the same `SKILL.md` format. The Claude Code plugin installs it for you; the other guides say where to copy it.
 
 ## Tools
 
-| Tool | What it does |
+Everything is a thin wrapper over the platform's HTTP API, which describes itself at [antideploy.com/api/v1](https://antideploy.com/api/v1).
+
+| Group | Tools |
 | --- | --- |
-| `deploy` | Packages the project directory and deploys it. Returns a `taskId`. |
-| `deployment_status` | Progress for one deploy: steps, the analyzed spec, warnings, hazards. |
-| `list_env` | Environment variable names. Values are never returned. |
-| `set_env` | Store or replace environment variables. |
-| `redeploy` | Build again without sending the code. This is how a changed variable or a new AI key reaches the running app. `latest` deploys a GitHub application's newest commit. |
-| `remove_env` | Remove one environment variable. |
-| `deployment_history` | Recent deploys, with the failure sentence for any that failed. |
-| `logs` | What the running container has printed. |
-| `health` | Whether it is serving, and when that was last checked. |
-| `metrics` | Requests, server errors, and p50 and p95 response times. |
-| `rollback` | Put back the last version that went live before this one, or a specific one. |
-| `app_settings` | The address, source, `deployOnPush` and root directory. |
-| `update_app_settings` | Change the address, `deployOnPush` (GitHub applications) or the root directory. |
-| `list_schedules`, `add_schedule`, `set_schedule_enabled`, `remove_schedule` | Scheduled jobs: call a path on the application on a cron schedule, in UTC. |
-| `database_info` | The application's database: state, size, tables, connection string masked. |
-| `database_create` | Create the application's Postgres now, before its first deploy, so the project is written against the real database. Idempotent. The deploy later reuses it. |
-| `database_env_to_file` | Write `DATABASE_URL` and the `PG*` variables into `.env` and return only their names, so the password never enters the conversation. Needs the account token saved by the connect step. |
-| `storage_create` | Create the application's private S3 bucket now, before its first deploy, for a project that stores uploads. Idempotent. The deploy later gives the running app the same bucket. |
-| `storage_env_to_file` | Write `AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT_URL_S3`, `AWS_REGION` and the other spellings into `.env` and return only their names, so the key never enters the conversation. Needs the account token saved by the connect step. |
-| `security_scan`, `security_scan_status` | Scan the live app for common vulnerabilities, and read the findings. |
-| `ai_wallet`, `create_ai_key` | The AI wallet balance, and an AI key saved into the application as `OPENROUTER_API_KEY` (the secret is never shown to the agent). |
-| `api_info` | The platform API's own description of itself. |
+| Sign in | `login`, `logout` |
+| Applications | `list_applications`, `create_application`, `link_application`, `check_address`, `app_settings`, `update_app_settings` |
+| Deploy | `deploy`, `deployment_status`, `redeploy`, `rollback`, `deployment_history` |
+| Variables | `list_env`, `set_env`, `set_env_from_file`, `remove_env`, `request_keys` |
+| Run it | `logs`, `health`, `metrics`, `list_schedules`, `add_schedule`, `set_schedule_enabled`, `remove_schedule` |
+| Database | `database_info`, `database_create`, `database_env_to_file` |
+| Storage, sign-in, email for the app | `storage_create`, `storage_env_to_file`, `auth_create`, `auth_env_to_file`, `email_create`, `email_env_to_file`, `email_status`, `email_activity`, `email_deliverability`, `email_domain`, `email_overview`, `email_pause`, `email_resume`, `email_test`, `email_remove` |
+| Checks and AI | `security_scan`, `security_scan_status`, `ai_wallet`, `create_ai_key`, `api_info` |
 
-Deploys are asynchronous. `deploy`, `redeploy` and `rollback` hand back a
-`taskId`; poll `deployment_status` until it reports `succeeded` or `failed`.
+Deploys are asynchronous. `deploy`, `redeploy` and `rollback` hand back a `taskId`; poll `deployment_status` until it reports `succeeded` or `failed`.
 
-Not here, because a project key is not allowed them: reading rows from the
-database, and creating more keys. An agent that can run commands can do both
-with an account token (see `https://antideploy.com/agent.md`). Custom domains,
-deleting an application and billing stay in the dashboard.
+Not offered, on purpose: deleting an application or its database, custom domains, billing, and adding money to the AI wallet. Those stay in the [console](https://antideploy.com/console), where a person does them deliberately.
 
-### Building against the database and the bucket before the first deploy
+## Secrets and files
 
-`database_create` works with the project key alone. Reading the connection
-string does not, because a project key is made to be committed and must not be
-able to read a database. `database_env_to_file` therefore uses the **account
-token** that connecting through [antideploy.com/agent.md](https://antideploy.com/agent.md)
-saves at `~/.antideploy/config.json`. It reads that file at the moment it needs
-it, never from this server's environment (where it would end up in a config file
-that gets committed), and uses it for the one application the key names. It
-writes only to a `.env*` file inside the project directory, replaces variables
-that are already there instead of adding a second copy, and adds the file to
-`.gitignore`. Without the token it says how to get one.
-
-File storage works the same way: `storage_create` takes the project key alone,
-and `storage_env_to_file` uses the account token to put the bucket's access key
-in `.env`. The bucket speaks S3 with path-style addressing, which current AWS
-SDKs and boto3 choose by themselves for its name, so existing code that reads
-those variables works as it is (new JavaScript code can set `forcePathStyle:
-true` anyway), and a browser can upload to it with a presigned URL.
-
-## Two things worth knowing
-
-**The whole directory is sent, not just the entry point.** The single most common
-way to break a deploy on this platform is to upload one file: it builds fine,
-starts fine, and then serves a page whose every asset 404s.
-
-**A `.env` in the directory is uploaded on purpose.** Its values go into
-Antideploy's encrypted secret store and the file itself is dropped from the build
-context, so you don't retype nine API keys you already have on disk. If that is
-not what you want, move the file before deploying.
-
-Skipped automatically: `node_modules`, `.git`, build output (`dist`, `build`,
-`.next`, `target`, …), virtualenvs, editor and tool caches, and private keys
-(`*.pem`, `*.key`, `id_rsa`, …).
+- **Tokens and passwords never enter the conversation.** `login` does not show the token. `database_env_to_file` and the other `*_env_to_file` tools write the variables straight into a `.env*` file inside the project and answer with their names only. They add the file to `.gitignore` before writing it.
+- **A `.env` file is never uploaded.** Neither are `node_modules`, build output, private keys or Python virtualenvs. The deploy result names any `.env` files it left out. To store variables from one, call `set_env_from_file` with the names: it reads the file locally, sends only those, and never shows a value. It refuses the names the platform sets itself (`DATABASE_URL`, `PG*`, storage, sign-in and email variables, the application's own address and generated signing secrets).
+- **Keys only you have.** `request_keys` gives you a page on antideploy.com to paste a Stripe key or a bot token into, so the agent never sees it.
+- **One application at a time, never guessed.** A folder is tied to its application by `.antideploy.json` (an id, no secret; commit it). A folder without one is refused, not matched to an application by guesswork.
+- **Only the project folder.** The tools act inside the folder the server was started in (or `ANTIDEPLOY_PROJECT_DIR`). A folder named in a call must be inside it, a home directory or a drive is refused as a project, and nothing is written through a symbolic link. An agent working in a repository you did not write cannot be talked into sending another folder to Antideploy or writing a secret outside the project.
 
 ## Limits
 
-| | |
-| --- | --- |
-| Files | 4,000 |
-| Per file | 5 MB |
-| Total upload | 28 MB |
-| Concurrent deploys | 1 per application |
-
-Checked locally before anything is uploaded, so hitting one costs you an error
-rather than a transfer.
+The upload limits are read from the platform at deploy time, so they follow its contract: currently 4,000 files and 28 MB for a project, and 28 MB for any one file. One deploy at a time per application. A larger project deploys from GitHub instead. The platform's own limits on plans, databases and what it cannot run are listed at [antideploy.com/blog/what-antideploy-cannot-run](https://antideploy.com/blog/what-antideploy-cannot-run).
 
 ## Configuration
 
+All optional.
+
 | Variable | |
 | --- | --- |
-| `ANTIDEPLOY_API_KEY` | Required. The key for the application to deploy. |
-| `ANTIDEPLOY_URL` | Optional. Defaults to `https://antideploy.com`. |
+| `ANTIDEPLOY_API_KEY` | A project key for one application, made in the console (starts with `ad_`). For a pipeline or a second machine. A server started with one is bound to that application and works without `login`. |
+| `ANTIDEPLOY_URL` | Defaults to `https://antideploy.com`. A login for any other address is kept in its own file, so a test server never replaces your real login. |
+| `ANTIDEPLOY_PROJECT_DIR` | The project folder, for a client that starts servers somewhere else. Defaults to the working directory. |
+
+## Development
+
+```bash
+npm install
+npm test            # the server over stdio against a stand-in platform, units, packaging
+npm run build       # one bundled file in dist/
+npm run test:bundle # the same end-to-end suite against the bundle
+```
+
+The end-to-end tests start the real server as an agent does, with a throwaway home directory, against a local stand-in for the API (`test/fake-antideploy.mjs`). They send nothing to antideploy.com. Whether the real platform keeps the contract is checked separately; see [ACCEPTANCE.md](ACCEPTANCE.md).
+
+`npm run build` bundles the server and its dependencies into one file, so a first `npx` start has nothing to resolve.
 
 ## What Antideploy does with what you send
 
-Reads the source and works out the runtime, framework, build and start commands,
-the port, and every environment variable the code references, deterministically,
-citing the file each conclusion came from, not by asking a model to guess. Then
-provisions what the app needs, including a Postgres database with `DATABASE_URL`
-injected and migrations run *before* the app starts rather than after it has
-already crashed. Then builds a container with buildpacks, releases it behind
-HTTPS, and keeps it running: health checks, logs, and rollback to the last
-version that went live (built again from its source, so it takes as long as a
-deploy).
-
-Full documentation: [antideploy.com/docs](https://antideploy.com/docs)
+It reads the source and works out the runtime, framework, build and start commands, the port and the environment variables the code references, citing the file each conclusion came from. It provisions what the app needs, including a Postgres database with `DATABASE_URL` set, builds it, releases it behind HTTPS, and keeps it running with health checks, logs and rollback. Full documentation: [antideploy.com/docs](https://antideploy.com/docs).
 
 ## License
 
