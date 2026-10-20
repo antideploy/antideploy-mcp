@@ -33,6 +33,11 @@ describe("versions", () => {
     assert.equal(json("server.json").packages[0].identifier, pkg.name);
   });
 
+  it("keep the registry description within the registry's limit of 100 characters", () => {
+    // `mcp-publisher validate` refused a 111 character description on 20 Oct 2026.
+    assert.ok(json("server.json").description.length <= 100, json("server.json").description.length + " characters");
+  });
+
   it("show no project key as required anywhere", () => {
     const vars = json("server.json").packages[0].environmentVariables;
     assert.equal(vars.find((v) => v.name === "ANTIDEPLOY_API_KEY").isRequired, false);

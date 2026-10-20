@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "com.antideploy/antideploy-mcp",
   "title": "Antideploy",
-  "description": "Deploy and run apps on Antideploy from a coding agent. Sign in with one link; no dashboard, Dockerfile or YAML.",
+  "description": "Deploy and run apps from your coding agent. Sign in with one link; no dashboard or Dockerfile.",
   "websiteUrl": "https://antideploy.com/docs/deploying/mcp",
   "repository": {
     "url": "https://github.com/antideploy/antideploy-mcp",
