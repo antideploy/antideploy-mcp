@@ -16,6 +16,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
+    "build:mcpb": "node build.mjs && node scripts/build-mcpb.mjs",
     "test": "node --test test/e2e.test.mjs test/units.test.mjs test/packaging.test.mjs",
     "test:bundle": "node build.mjs && node scripts/with-entry.mjs dist/antideploy-mcp.mjs -- node --test test/e2e.test.mjs",
     "prepublishOnly": "npm run build && npm test"

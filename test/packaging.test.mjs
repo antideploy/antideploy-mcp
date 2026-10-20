@@ -25,6 +25,7 @@ describe("versions", () => {
     assert.equal(json("plugin/.claude-plugin/plugin.json").version, pkg.version);
     assert.equal(json(".claude-plugin/marketplace.json").metadata.version, pkg.version);
     assert.equal(json("plugin/.cursor-plugin/plugin.json").version, pkg.version);
+    assert.equal(json("mcpb/manifest.json").version, pkg.version);
   });
 
   it("name the package the way the registry expects", () => {
@@ -39,6 +40,18 @@ describe("versions", () => {
     // empty defaults, so the plugin declares none; a key comes from the environment it inherits.
     assert.equal(json("plugin/.claude-plugin/plugin.json").userConfig, undefined);
     assert.equal(json("plugin/.mcp.json").mcpServers.antideploy.env, undefined);
+  });
+});
+
+describe("the MCP bundle for Smithery", () => {
+  it("declares a node server run from its own folder, and no settings an empty value could break", () => {
+    const m = json("mcpb/manifest.json");
+    assert.equal(m.server.type, "node");
+    assert.equal(m.server.entry_point, "server/index.mjs");
+    assert.deepEqual(m.server.mcp_config.args, ["${__dirname}/server/index.mjs"]);
+    assert.equal(m.user_config, undefined, "an unset optional setting may reach the server as a literal placeholder");
+    assert.equal(m.server.mcp_config.env, undefined);
+    assert.equal(m.icon, "icon.png");
   });
 });
 

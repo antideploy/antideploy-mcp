@@ -1,0 +1,33 @@
+{
+  "manifest_version": "0.3",
+  "name": "antideploy",
+  "display_name": "Antideploy",
+  "version": "0.2.0",
+  "description": "Deploy and run apps on Antideploy from your coding agent. Sign in with one link; no dashboard, Dockerfile or key to copy.",
+  "long_description": "Ask your agent to deploy a project and it shows you one link; you open it and click Approve. It then creates the application and a Postgres database if the project needs one, deploys, reads the logs, and tells you where the app is live and on which account. It works from a local folder, so no GitHub repository is needed. It never shows a token or password to the agent, never uploads a .env file, only acts inside the folder it was started in, and does not delete anything.",
+  "author": {
+    "name": "Antideploy",
+    "url": "https://antideploy.com"
+  },
+  "homepage": "https://antideploy.com",
+  "documentation": "https://antideploy.com/docs/deploying/mcp",
+  "support": "https://antideploy.com/contact",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antideploy/antideploy-mcp"
+  },
+  "license": "MIT",
+  "keywords": ["deploy", "deployment", "hosting", "paas", "coding-agent", "mcp"],
+  "icon": "icon.png",
+  "server": {
+    "type": "node",
+    "entry_point": "server/index.mjs",
+    "mcp_config": {
+      "command": "node",
+      "args": ["${__dirname}/server/index.mjs"]
+    }
+  },
+  "compatibility": {
+    "runtimes": { "node": ">=18.0.0" }
+  }
+}
