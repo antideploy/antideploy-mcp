@@ -1,6 +1,6 @@
 # Acceptance status, 0.2.0 release candidate
 
-What has been checked, how, and what has not. Written 20 October 2026 and updated the same day after the first live runs. Nothing has been published to npm.
+What has been checked, how, and what has not. Written 20 October 2026 and updated the same day after the first live runs and after 0.2.0 was published to npm and the MCP Registry.
 
 Statuses are **Verified** (seen working, with the evidence named), **Failed**, or **Untested** (not run, with the reason). A check against the local stand-in server (`test/fake-antideploy.mjs`) proves the connector speaks the platform's documented contract. It does not prove the platform keeps that contract, so no live status below rests on it.
 
@@ -8,7 +8,7 @@ Statuses are **Verified** (seen working, with the evidence named), **Failed**, o
 
 | Agent | Installation method | Authentication | Deployment | Logs | Update | Result |
 | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake. The live runs below used `--mcp-config` with the bundle, not the plugin install. Untested from GitHub or npm | **Verified live** with one Approve click. One extra message was needed, see "Findings" | **Verified live**: the agent created the application and deployed the Vite starter; it went live 2 min 41 s after the deploy call. In the first run the agent gave up early (finding 1); with the fix (run F) it finished | **Verified live** in run F: the agent read the logs after the deploy and reported the address and the account | **Verified live**: in run F an agent deployed over an existing application. The update itself was also checked by a direct call, and a second session **reused the saved login and the folder link** | Deploys, reads logs and reuses its login. One extra message after the Approve click. Found the silent name reuse in finding 7, now warned about in `f6094cc` |
+| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake. The live runs below used `--mcp-config` with the bundle, not the plugin install. Untested from GitHub. The published npm package starts through `npx` and lists 48 tools (cold 6.8 s) | **Verified live** with one Approve click. One extra message was needed, see "Findings" | **Verified live**: the agent created the application and deployed the Vite starter; it went live 2 min 41 s after the deploy call. In the first run the agent gave up early (finding 1); with the fix (run F) it finished | **Verified live** in run F: the agent read the logs after the deploy and reported the address and the account | **Verified live**: in run F an agent deployed over an existing application. The update itself was also checked by a direct call, and a second session **reused the saved login and the folder link** | Deploys, reads logs and reuses its login. One extra message after the Approve click. Found the silent name reuse in finding 7, now warned about in `f6094cc` |
 | Cursor 2.6.20 | Untested: GUI only, and installing would change the real Cursor settings. Config and install link checked against Cursor's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenAI Codex | Untested: not installed on this machine. `config.toml` checked as valid TOML against Codex's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenCode | Untested: not installed on this machine. `opencode.json` checked against OpenCode's docs | Untested | Untested | Untested | Untested | Untested |
@@ -30,7 +30,9 @@ Statuses are **Verified** (seen working, with the evidence named), **Failed**, o
 | Claude Code starts the bundled server and completes the handshake | Verified | `claude mcp list` |
 | The open skills installer finds the skill and lays it out for each agent | Verified from a local path: `.agents/skills/antideploy` (read by Cursor, Codex, OpenCode) and `.claude/skills/antideploy` | `npx skills add <path>` |
 | Plugin-launched servers inherit the shell environment, so a project key needs no plugin setting | Verified | A probe plugin |
-| First start from a clean machine | Measured: published 0.1.3 took 14.7 s cold and 3.7 s warm. The 0.2.0 bundle installs from its tarball in 2.3 s and answers in 0.2 s. The 0.2.0 figure excludes the registry download of one 250 kB package, so re-measure with `npx -y antideploy-mcp@0.2.0` after publishing | Stopwatch runs |
+| First start from a clean machine | Measured: published 0.1.3 took 14.7 s cold and 3.7 s warm. The 0.2.0 bundle installs from its tarball in 2.3 s and answers in 0.2 s. After publishing, `npx -y antideploy-mcp@0.2.0` from the public registry with an empty npm cache reached a completed handshake and tool list in 6.8 s, and in 3.8 s with the cache warm (Windows, one run each) | Stopwatch runs |
+| `antideploy-mcp@0.2.0` on public npm | Verified: the registry serves it (7 files, shasum `b10eb998aa4aa1643ebe82741570e3bce0b3b85f`, the one the dry run printed), `latest` is 0.2.0, and a clean `npx` start reports server version 0.2.0 with 48 tools, `login` and the `waitSeconds` option | `npm view`, the registry URL, a cold-cache handshake |
+| The official MCP Registry | Verified: `com.antideploy/antideploy-mcp` 0.2.0 is active and marked latest | `registry.modelcontextprotocol.io/v0/servers` |
 | The three starters build and run against a real Postgres | Verified locally: Vite build rendered in headless Chrome; Next.js built with no `DATABASE_URL`, then served, stored and listed notes; FastAPI did the same | Not deployed |
 | Agent attribution report | Verified on a throwaway Postgres with the platform's real schema and 36 fixture checks | `test-agent-attribution.ts` in the platform repository, which is private |
 
@@ -136,4 +138,4 @@ Then run scenarios 4 to 7 in the same session. Put each result in the matrix abo
 - Whether Claude Code, Codex, Cursor and OpenCode choose these tools and this skill for a deploy request on their own. A discovery benchmark, kept in a separate folder (`antideploy-benchmark`) outside this repository, measures that; no baseline has been run.
 - Whether Cursor loads the plugin folder from a subdirectory of a repository, and whether its marketplace accepts that layout.
 - Whether Anthropic's directory scan holds the pinned `npx` launcher for human review (its checklist says a pinned package is held). A hold is not a rejection.
-- The first start time of `npx -y antideploy-mcp@0.2.0` on a clean machine, after publishing.
+- The first start time on a slower machine or network than this one (6.8 s cold here).
