@@ -1,6 +1,6 @@
 # Acceptance status, 0.2.0 release candidate
 
-What has been checked, how, and what has not. Written 20 October 2026. Nothing here has been published.
+What has been checked, how, and what has not. Written 20 October 2026 and updated the same day after the first live runs. Nothing has been published to npm.
 
 Statuses are **Verified** (seen working, with the evidence named), **Failed**, or **Untested** (not run, with the reason). A check against the local stand-in server (`test/fake-antideploy.mjs`) proves the connector speaks the platform's documented contract. It does not prove the platform keeps that contract, so no live status below rests on it.
 
@@ -8,7 +8,7 @@ Statuses are **Verified** (seen working, with the evidence named), **Failed**, o
 
 | Agent | Installation method | Authentication | Deployment | Logs | Update | Result |
 | --- | --- | --- | --- | --- | --- | --- |
-| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake (`✔ Connected`). Untested from GitHub (not pushed) | Untested | Untested | Untested | Untested | Installs and starts. Live lifecycle not run |
+| Claude Code 2.1.280 | **Verified**: plugin from a local marketplace in an isolated config; bundled server completes the MCP handshake. The live runs below used `--mcp-config` with the bundle, not the plugin install. Untested from GitHub or npm | **Verified live** with one Approve click. One extra message was needed, see "Findings" | **Verified live**: the agent created the application and deployed the Vite starter; it went live 2 min 41 s after the deploy call. The agent itself gave up early, see "Findings" | The agent never reached `logs`. The tool itself is **verified live** by a direct call | The agent's own redeploy was stopped by its spend cap before any deploy ran. The update itself is **verified live** by a direct call. The saved login and the folder link were **reused by a new agent session** | Deploys and reuses its login. Needed the status-wait fix, now in `ea46a92`; the agent has not yet been re-run with it |
 | Cursor 2.6.20 | Untested: GUI only, and installing would change the real Cursor settings. Config and install link checked against Cursor's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenAI Codex | Untested: not installed on this machine. `config.toml` checked as valid TOML against Codex's docs | Untested | Untested | Untested | Untested | Untested |
 | OpenCode | Untested: not installed on this machine. `opencode.json` checked against OpenCode's docs | Untested | Untested | Untested | Untested | Untested |
@@ -36,19 +36,65 @@ Statuses are **Verified** (seen working, with the evidence named), **Failed**, o
 
 ## The seven scenarios, by entry point
 
-A is the one-sentence prompt, B the installed skill, C the MCP tools. No scenario has been run live. Entry point C's mechanics are covered against the stand-in; A and B have not been run by any agent.
+A is the one-sentence prompt, B the installed skill, C the MCP tools. Only entry point C has been run live, by Claude Code, on 20 October 2026. A and B have not been run by any agent. Scenarios 2, 3 and 6 have not been run live.
 
 | Scenario | A. Sentence | B. Skill | C. MCP |
 | --- | --- | --- | --- |
-| 1. Deploy a static Vite application | Untested | Untested | Untested |
+| 1. Deploy a static Vite application | Untested | Untested | **Verified live** with Claude Code (the starter, 13 files, live in 2 min 41 s). Not yet re-run with the status-wait fix |
 | 2. Deploy a Next.js application | Untested | Untested | Untested |
 | 3. Deploy a backend with managed Postgres | Untested | Untested | Untested |
-| 4. Retrieve deployment logs | Untested | Untested | Untested |
-| 5. Update an existing application | Untested | Untested | Untested |
+| 4. Retrieve deployment logs | Untested | Untested | The tool is **verified live** (direct call, real lines, health `healthy`). No agent has called it yet |
+| 5. Update an existing application | Untested | Untested | Update **verified live** by a direct call (205 s, new page served). An agent's own redeploy is untested |
 | 6. Diagnose a failed deployment | Untested | Untested | Untested |
-| 7. Credentials are reused correctly | Untested | Untested | Untested |
+| 7. Credentials are reused correctly | Untested | Untested | **Verified live**: a second Claude Code session, with no approval, saw the saved login and the folder's link to its application |
 
 The projects for scenarios 1 to 3 are three small starters (Vite, Next.js with Postgres, FastAPI with Postgres) that live in a separate folder, `antideploy-starters`, outside this repository.
+
+## Live runs, 20 October 2026
+
+Platform: https://antideploy.com (production), on a dedicated test account that signs in with Google. Connector 0.2.0 from branch `release/0.2.0`, bundle `dist/antideploy-mcp.mjs`, with a throwaway home folder, so the login saved on the machine was never read. Agent: Claude Code 2.1.280, model `claude-sonnet-5-5` (the CLI printed `unrecognized_model` on stderr and ran regardless), started with `--tools ""` (no shell or file tools: only the 48 Antideploy tools), `--strict-mcp-config` and `--setting-sources project`. The project was a copy of the Vite starter.
+
+| Run | What | Result | Cost |
+| --- | --- | --- | --- |
+| A | `scripts/live-check.mjs --deploy`, the connector alone | **Pass.** 0 failures, 1 manual step (the Approve click), 278 s in all. First live deploy 63 s, update 29 s, the live address served the change | none |
+| B | Claude Code, `-p`, "Deploy this project on Antideploy." | Stopped at the approval link. The agent showed it and ended its turn. The connector process ended with the turn and forgot the pending code, so approving that code could not connect anything | 0.22 USD |
+| C | Same prompt, streaming mode (one connector process for the whole session) | Nobody approved in time. The agent checked four times and stopped | 0.10 USD |
+| D | Same, idling at no cost until the person said "approved" | Connected on the first check after the person's "continue". Created the application, deployed, and the app went live at https://project.antideploy.app after 2 min 41 s. The agent polled the status about 20 times in 40 s, spent 0.44 USD, and stopped at under two minutes, saying the build had been stuck "for many minutes" | 0.44 USD |
+| E | A new Claude Code session, same project and home, "deploy it again" | `login` answered `connected` with no approval and named the application the folder is linked to. Stopped by its 0.20 USD cap after four turns, because a cold prompt cache cost 0.20 USD before the deploy call finished. No new deployment was made | 0.20 USD |
+
+Claude Code spend: 0.96 USD of the 1.00 USD allowed. Benchmark probe: 0.23 USD of 0.25 USD.
+
+Checks made directly against the connector as the same login, which cost nothing (15 of 15 passed):
+
+| Check | Result |
+| --- | --- |
+| `set_env_from_file` with a real name, a platform-managed name and an empty value | Stored the real one; refused `DATABASE_URL` with the reason; the value never appeared in any result |
+| `list_env` | The name, no value |
+| `deploy` with a `.env` in the folder | 13 files sent, the `.env` reported as not sent |
+| Update: change the page, `deploy`, follow with the waiting `deployment_status` | Live after 205 s with 11 status calls; the live bundle served the change |
+| A `directory` outside the project folder | Refused |
+| `logs` from a folder that is not linked to an application | Refused, saying to call `create_application`; no guess |
+| Account token with no application named | HTTP 400 |
+| Account token naming an application that is not the account's | HTTP 404 |
+| The same token naming its own application | HTTP 200 |
+| An invalid token, and no token | HTTP 401 for both |
+
+Not tested: a second account's token against this account's application (needs a second test account), and a project key (`ad_`) against account-level routes.
+
+### Findings
+
+1. **The agent polled in a tight loop** (run D). `deployment_status` answered at once, so the agent made about 20 calls in 40 s, spent 0.44 USD and gave up on a deploy that finished two minutes later. Fixed in `ea46a92`: one call now waits up to 20 s, `waitSeconds` can shorten or lengthen it (0 to 40), an unfinished answer says to call again, and the skill says not to pause or loop. Verified with the stand-in (a test that fails when the wait is removed) and, for the connector, live (205 s update, 11 calls). **An agent has not been re-run with the fix.**
+2. **A pending sign-in does not survive the connector process.** In `claude -p` the process ends with the turn, so a person who approves the link afterwards has approved a code nothing can redeem; the next run issues a new code. Interactive sessions keep the process, and the streaming run (D) connected normally. Saving the pending code to disk, with the same protection as the token, would close this. Not done: it is security-sensitive and needs its own review.
+3. **One extra message was needed.** The agent shows the link and ends its turn; the person clicks Approve and says so. Manual steps for a first deploy: the click and one message.
+4. **A cold start is expensive.** A session whose prompt cache is cold paid about 0.20 USD before doing anything; a warm one paid 0.03 USD per turn. Budget a first run at 0.25 USD or more.
+5. **The starter's own instructions were followed.** Its `CLAUDE.md` says to build before deploying; the agent tried to, found it had no shell, and went on because the platform builds. This shows the harness limit more than a defect.
+6. The agent in run D told the user the account it was connected to, and warned that it was not the address in its context. That is the behaviour the skill asks for.
+
+### To clean up (nothing was deleted automatically)
+
+- Applications on the test account: `live-check-mvg87gia` (https://antideploy.com/app/d3a358b9-26e4-4df6-a510-681489ab85bc) and `project` (https://antideploy.com/app/48c9fe50-7d72-4cc6-bee1-a0e500e7e6d7). Delete them in the console.
+- Logins: revoke the ones created today at https://antideploy.com/tokens.
+- The temporary folders were removed from this machine.
 
 ## Running the live check
 
@@ -85,6 +131,7 @@ Then run scenarios 4 to 7 in the same session. Put each result in the matrix abo
 
 ## Not yet known
 
+- Whether an agent finishes a deploy with the status-wait fix; the last agent run predates it.
 - Whether Claude Code, Codex, Cursor and OpenCode choose these tools and this skill for a deploy request on their own. A discovery benchmark, kept in a separate folder (`antideploy-benchmark`) outside this repository, measures that; no baseline has been run.
 - Whether Cursor loads the plugin folder from a subdirectory of a repository, and whether its marketplace accepts that layout.
 - Whether Anthropic's directory scan holds the pinned `npx` launcher for human review (its checklist says a pinned package is held). A hold is not a rejection.
