@@ -185,6 +185,7 @@ describe("signing in and deploying with an account token", () => {
     const r = await agent.call("create_application", { name: "demo" });
     assert.equal(r.isError, false, r.text);
     assert.match(r.json.applicationId, /^[0-9a-f-]{36}$/);
+    assert.equal(r.json.warning, undefined, "a new application carries no warning");
     const link = JSON.parse(fs.readFileSync(path.join(dir, ".antideploy.json"), "utf8"));
     assert.equal(link.applicationId, r.json.applicationId);
     const again = await agent.call("create_application", { name: "demo" });
@@ -218,6 +219,9 @@ describe("signing in and deploying with an account token", () => {
     assert.equal(r.json.reusedExisting, true);
     const mine = JSON.parse(fs.readFileSync(path.join(dir, ".antideploy.json"), "utf8"));
     assert.equal(r.json.applicationId, mine.applicationId);
+    assert.match(r.json.warning, /replaces whatever is live/, "a reused name is a warning, not a quiet success");
+    assert.match(r.json.next, /ask the user/i);
+    assert.match(r.json.next, /^Before .deploy./, "the next step must not just say to deploy");
   });
 
   it("creates the database and writes its variables to .env without printing them", async () => {

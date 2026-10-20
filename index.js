@@ -529,7 +529,9 @@ server.registerTool(
       ".antideploy.json, so every later call knows which application it is about. This is the step the " +
       "dashboard used to be for: there is no application or key to make by hand. Do it once per project, " +
       "before `database_create` and `deploy`. A name already in use answers with the existing application, " +
-      "which is then linked instead of duplicated. The address is the user's to choose: if they have said " +
+      "which is then linked instead of duplicated and marked `reusedExisting`: that application may belong " +
+      "to another project, and a deploy replaces what is live there, so ask the user before deploying to it. " +
+      "The address is the user's to choose: if they have said " +
       "what they want, pass it as `subdomain` after `check_address`; otherwise leave it out and settle it " +
       "with `update_app_settings` before the first deploy. A 402 means the plan's limit is reached: " +
       "that is not a rate limit, so do not retry, say what it says and let the user choose. Needs `login`.",
@@ -577,7 +579,16 @@ server.registerTool(
       reusedExisting: reused,
       linkFile: file,
       dashboard: created.dashboard,
-      next: "Create its database with `database_create` if the project needs one, then `deploy`. Tell the user which account this is on.",
+      ...(reused
+        ? {
+            warning:
+              "This name already belonged to an application on this account, and this folder is now linked to it. " +
+              "A deploy replaces whatever is live there.",
+          }
+        : {}),
+      next: reused
+        ? "Before `deploy`, ask the user whether this folder is that application's project (check `deployment_history`). If it is a different project, `link_application` another one or delete `.antideploy.json` and create one under a different name. Tell the user which account this is on."
+        : "Create its database with `database_create` if the project needs one, then `deploy`. Tell the user which account this is on.",
     });
   },
 );

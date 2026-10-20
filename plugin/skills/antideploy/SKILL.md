@@ -30,7 +30,7 @@ If you have the `login` and `deploy` tools (the Antideploy MCP server), use them
 
 ## Deploy a project
 
-1. `create_application` for this folder. It writes `.antideploy.json`, which holds no secret and can be committed. Ask the user what address they want if they have an opinion (`check_address` first); otherwise let it default.
+1. `create_application` for this folder. It writes `.antideploy.json`, which holds no secret and can be committed. Ask the user what address they want if they have an opinion (`check_address` first); otherwise let it default. If the answer says `reusedExisting: true`, the name already belonged to an application on the account and this folder is now linked to it: ask the user before you deploy, because a deploy replaces what is live there.
 2. If the project stores data, call `database_create` and then `database_env_to_file` while you are still building, and develop against that database, not SQLite. Likewise `storage_create` for uploads, `auth_create` for sign-in, `email_create` for mail. Skip each when the user already chose a provider. Do not copy `DATABASE_URL`, storage, sign-in or email variables anywhere: the platform sets them in the running app.
 3. Variables the app needs from a local `.env`: `set_env_from_file` with the names (it never shows values). A key only the user has: `request_keys` gives them a page to paste it on. Never ask for a key in the chat. A `.env` file is never uploaded.
 4. `deploy`. It returns a `taskId`; call `deployment_status` until it says `succeeded` or `failed`. Each call waits up to 20 seconds by itself, so call it again straight away, with no pause and no loop of your own. A first deploy takes one to three minutes.
