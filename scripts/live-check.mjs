@@ -97,8 +97,15 @@ try {
     console.log(`  Check the code reads ${login.json.code}, then click Approve.\n`);
     report.manualSteps.push("Open the approval link and click Approve");
     const deadline = Date.now() + 15 * 60 * 1000;
+    let shown = login.json.code;
     while (Date.now() < deadline && login.json?.status !== "connected" && login.json?.status !== "denied") {
       login = await call("login");
+      // A code lasts 15 minutes. When it runs out the connector starts a new one, and that one must be shown.
+      if (login.json?.code && login.json.code !== shown) {
+        shown = login.json.code;
+        console.log(`\n  The earlier code expired. Open ${login.json.url}`);
+        console.log(`  Check the code reads ${login.json.code}, then click Approve.\n`);
+      }
     }
   }
   if (login.json?.status !== "connected") throw new Error("Not connected: " + (login.json?.status || login.text));
