@@ -353,6 +353,14 @@ let pendingLogin = null;
 // Under the 60 s some clients give a tool call. The variable is for tests and slow links.
 const LOGIN_WAIT_SECONDS = Math.min(Number(process.env.ANTIDEPLOY_LOGIN_WAIT_SECONDS) || 40, 50);
 
+/* How long one deployment_status call waits for the deploy to finish. An agent that gets an answer at
+   once polls in a tight loop: in the first acceptance run on 20 Oct 2026 one did about twenty calls in
+   forty seconds, spent 0.44 USD, and gave up on a deploy that went live two minutes later. Kept well
+   under the 60 seconds Codex allows a tool call by default. */
+const STATUS_WAIT_SECONDS = 20;
+const STATUS_WAIT_MAX_SECONDS = 40;
+const STATUS_POLL_MS = Number(process.env.ANTIDEPLOY_STATUS_POLL_MS) || 2000;
+
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 function describeAccount(account) {
@@ -688,14 +696,38 @@ server.registerTool(
     title: "Check a deployment",
     description:
       "Progress for one deployment: status, per-step detail, the analyzed spec, warnings and hazards. " +
-      "Poll until the status is succeeded or failed. Once it is live, `summary` is the sentence to tell " +
-      "the user: the address and the account. On a failure read `error`, `failedStep` and the logs, fix the " +
-      "cause, and only then deploy again; an unchanged redeploy fails the same way.",
-    inputSchema: { taskId: z.string().describe("The taskId returned by `deploy`.") },
+      "The call waits up to 20 seconds for the deploy to finish, so call it again straight away until the " +
+      "status is succeeded or failed; do not add pauses or your own polling loop. A first deploy usually " +
+      "takes one to three minutes. Once it is live, `summary` is the sentence to tell the user: the address " +
+      "and the account. On a failure read `error`, `failedStep` and the logs, fix the cause, and only " +
+      "then deploy again; an unchanged redeploy fails the same way.",
+    inputSchema: {
+      taskId: z.string().describe("The taskId returned by `deploy`."),
+      waitSeconds: z
+        .number()
+        .int()
+        .min(0)
+        .max(STATUS_WAIT_MAX_SECONDS)
+        .optional()
+        .describe("How long to wait for the deploy to finish before answering. Default 20. 0 answers at once."),
+    },
     annotations: READ_ONLY,
   },
-  async ({ taskId }) =>
-    asText(await api("/api/v1/deployments/" + encodeURIComponent(taskId), {}, { scope: false })),
+  async ({ taskId, waitSeconds }) => {
+    const deadline = Date.now() + Math.min(waitSeconds ?? STATUS_WAIT_SECONDS, STATUS_WAIT_MAX_SECONDS) * 1000;
+    for (;;) {
+      const status = await api("/api/v1/deployments/" + encodeURIComponent(taskId), {}, { scope: false });
+      const finished = status?.finished === true || status?.status === "succeeded" || status?.status === "failed";
+      if (finished) return asText(status);
+      if (Date.now() + STATUS_POLL_MS > deadline) {
+        return asText({
+          ...status,
+          next: "Not finished yet. Call deployment_status again now; it waits for you. First deploys usually take one to three minutes.",
+        });
+      }
+      await new Promise((resolve) => setTimeout(resolve, STATUS_POLL_MS));
+    }
+  },
 );
 
 server.registerTool(

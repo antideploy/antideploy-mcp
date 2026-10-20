@@ -249,11 +249,20 @@ describe("signing in and deploying with an account token", () => {
   });
 
   it("follows the deploy to the sentence to tell the user", async () => {
-    const first = await agent.call("deployment_status", { taskId: "task_1" });
+    const first = await agent.call("deployment_status", { taskId: "task_1", waitSeconds: 0 });
     assert.equal(first.json.status, "building");
-    const done = await agent.call("deployment_status", { taskId: "task_1" });
+    assert.match(first.json.next, /call deployment_status again/i, "an unfinished answer says what to do next");
+    const done = await agent.call("deployment_status", { taskId: "task_1", waitSeconds: 0 });
     assert.equal(done.json.status, "succeeded");
     assert.match(done.json.summary, /live at https:\/\/demo\.antideploy\.app, on the Antideploy account/);
+    assert.equal(done.json.next, undefined, "a finished answer carries no next step");
+  });
+
+  it("waits for the deploy by itself, so an agent does not have to poll", async () => {
+    // The stand-in reports "building" once for a task and "succeeded" after, so a waiting call returns the finished state.
+    const waited = await agent.call("deployment_status", { taskId: "task_wait" });
+    assert.equal(waited.json.status, "succeeded");
+    assert.match(waited.json.summary, /live at/);
   });
 
   it("refuses a file over the contract's limit before uploading anything", async () => {

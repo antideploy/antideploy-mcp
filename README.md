@@ -68,7 +68,7 @@ Everything is a thin wrapper over the platform's HTTP API, which describes itsel
 | Storage, sign-in, email for the app | `storage_create`, `storage_env_to_file`, `auth_create`, `auth_env_to_file`, `email_create`, `email_env_to_file`, `email_status`, `email_activity`, `email_deliverability`, `email_domain`, `email_overview`, `email_pause`, `email_resume`, `email_test`, `email_remove` |
 | Checks and AI | `security_scan`, `security_scan_status`, `ai_wallet`, `create_ai_key`, `api_info` |
 
-Deploys are asynchronous. `deploy`, `redeploy` and `rollback` hand back a `taskId`; poll `deployment_status` until it reports `succeeded` or `failed`.
+Deploys are asynchronous. `deploy`, `redeploy` and `rollback` hand back a `taskId`; call `deployment_status` until it reports `succeeded` or `failed`. Each call waits up to 20 seconds for the deploy to finish, so there is no need to pause between calls.
 
 Not offered, on purpose: deleting an application or its database, custom domains, billing, and adding money to the AI wallet. Those stay in the [console](https://antideploy.com/console), where a person does them deliberately.
 
